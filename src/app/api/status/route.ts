@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { openDb } from '@/lib/db';
+import { getTaskById } from '@/lib/db';
 
 export const runtime = 'nodejs';
 
@@ -12,8 +12,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    const db = await openDb();
-    const task = await db.get('SELECT * FROM tasks WHERE id = ?', [taskId]);
+    const task = await getTaskById(taskId);
 
     if (!task) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });

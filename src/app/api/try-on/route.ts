@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
-import { openDb } from '@/lib/db';
+import { createPendingTask, setTaskFailed, setTaskProcessing, setTaskSuccess } from '@/lib/db';
 import { saveBase64Image } from '@/lib/upload';
 import {
   ARK_DEFAULT_MODEL,
@@ -41,10 +41,8 @@ async function processTask(
   storedGarmentUrl: string | null,
   mode: string
 ) {
-  const db = await openDb();
-  
   try {
-    await db.run('UPDATE tasks SET status = ? WHERE id = ?', ['processing', taskId]);
+    await setTaskProcessing(taskId);
 
     console.info('[TryOnWorker] task_processing_start', { taskId, mode });
 
@@ -103,10 +101,7 @@ async function processTask(
 
     console.info('[TryOnWorker] task_processing_success', { taskId, resultUrl: result.url });
 
-    await db.run(
-      'UPDATE tasks SET status = ?, resultUrl = ? WHERE id = ?',
-      ['success', result.url, taskId]
-    );
+    await setTaskSuccess(taskId, result.url);
 
   } catch (error: any) {
     const mappedMessage =
@@ -128,10 +123,7 @@ async function processTask(
       errorMessage: error?.message
     });
 
-    await db.run(
-      'UPDATE tasks SET status = ?, error = ? WHERE id = ?',
-      ['failed', mappedMessage, taskId]
-    );
+    await setTaskFailed(taskId, mappedMessage);
   }
 }
 
@@ -158,12 +150,14 @@ export async function POST(req: Request) {
     const personInput = hasBase64Pair ? personBase64 : personInputUrl;
     const garmentInput = hasBase64Pair ? garmentBase64 : garmentInputUrl;
 
-    const db = await openDb();
-    await db.run(
-      `INSERT INTO tasks (id, status, personUrl, garmentUrl, mode, createdAt) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [taskId, 'pending', storedPersonUrl, storedGarmentUrl, mode, Date.now()]
-    );
+    await createPendingTask({
+      id: taskId,
+      status: 'pending',
+      personUrl: storedPersonUrl,
+      garmentUrl: storedGarmentUrl,
+      mode,
+      createdAt: Date.now()
+    });
 
     console.info('[TryOnAPI] task_created', {
       taskId,
