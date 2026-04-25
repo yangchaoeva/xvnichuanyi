@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+
+<html class="light" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LuxeTry - 虚拟换衣</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed-variant": "#00458e",
+                        "surface-container-high": "#eae7ea",
+                        "tertiary-container": "#67686a",
+                        "on-secondary-fixed-variant": "#46464b",
+                        "surface-bright": "#fcf8fb",
+                        "on-background": "#1b1b1d",
+                        "tertiary-fixed-dim": "#c6c6c8",
+                        "primary": "#004e9f",
+                        "surface-variant": "#e4e2e4",
+                        "primary-fixed-dim": "#aac7ff",
+                        "background": "#fcf8fb",
+                        "secondary": "#5e5e63",
+                        "surface-container": "#f0edef",
+                        "on-primary": "#ffffff",
+                        "outline": "#727784",
+                        "on-tertiary-fixed-variant": "#454749",
+                        "tertiary": "#4e5052",
+                        "inverse-on-surface": "#f3f0f2",
+                        "on-error-container": "#93000a",
+                        "outline-variant": "#c1c6d5",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed": "#1a1c1d",
+                        "on-surface": "#1b1b1d",
+                        "error": "#ba1a1a",
+                        "inverse-primary": "#aac7ff",
+                        "primary-fixed": "#d7e3ff",
+                        "secondary-fixed-dim": "#c7c6cb",
+                        "on-secondary-container": "#626267",
+                        "surface-container-low": "#f6f3f5",
+                        "surface-container-highest": "#e4e2e4",
+                        "inverse-surface": "#303032",
+                        "on-secondary-fixed": "#1a1b1f",
+                        "tertiary-fixed": "#e2e2e4",
+                        "on-secondary": "#ffffff",
+                        "on-primary-fixed": "#001b3e",
+                        "on-primary-container": "#dfe8ff",
+                        "primary-container": "#0066cc",
+                        "surface-tint": "#005cba",
+                        "surface-dim": "#dcd9dc",
+                        "surface": "#fcf8fb",
+                        "secondary-fixed": "#e3e2e7",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-container": "#e0dfe4",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-container": "#e8e8ea",
+                        "error-container": "#ffdad6",
+                        "on-surface-variant": "#414753"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "stack-md": "16px",
+                        "margin-page": "40px",
+                        "container-max-width": "1200px",
+                        "section-padding": "24px",
+                        "stack-sm": "8px",
+                        "stack-lg": "32px"
+                    },
+                    "fontFamily": {
+                        "label-bold": ["Inter"],
+                        "headline-xl": ["Inter"],
+                        "body-main": ["Inter"],
+                        "body-large": ["Inter"],
+                        "label-subtle": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-bold": ["13px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                        "headline-xl": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "body-main": ["14px", {"lineHeight": "20px", "letterSpacing": "0", "fontWeight": "400"}],
+                        "body-large": ["16px", {"lineHeight": "24px", "letterSpacing": "0", "fontWeight": "400"}],
+                        "label-subtle": ["12px", {"lineHeight": "16px", "letterSpacing": "0", "fontWeight": "400"}],
+                        "headline-lg": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #f5f5f7;
+            font-family: 'Inter', sans-serif;
+        }
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .card-shadow {
+            box-shadow: 0 20px 30px rgba(0, 0, 0, 0.03);
+        }
+        .upload-dashed {
+            background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='20' ry='20' stroke='%23C1C6D5FF' stroke-width='2' stroke-dasharray='8%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+        }
+    </style>
+</head>
+<body class="text-on-surface">
+<!-- TopNavBar -->
+<nav class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-10 h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800 shadow-sm">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold text-slate-900 dark:text-white tracking-tighter">LuxeTry</span>
+<div class="hidden md:flex items-center gap-6">
+<a class="font-['Inter'] text-sm tracking-tight text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors" href="#">Upload Person</a>
+<a class="font-['Inter'] text-sm tracking-tight text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors" href="#">Upload Clothing</a>
+<a class="font-['Inter'] text-sm tracking-tight text-blue-600 dark:text-blue-400 font-semibold border-b-2 border-blue-600 pb-1" href="#">Generate</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
+<span class="material-symbols-outlined text-slate-500">help</span>
+</button>
+<button class="p-2 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
+<span class="material-symbols-outlined text-slate-500">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden bg-slate-200">
+<img alt="User profile" data-alt="close-up portrait of a professional man with a friendly expression and clean-cut style in soft daylight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDdukaaNHFyv4k0dRWj4FlosgYfKjY740IQP4EhM51m11VATqMtuIHO_-YkP8Wo_kDx-A0V-KCYfoIAY10OK7m0j2C6zIZ5uZ1zO3fxHRm6Mwdz_yigLUQREu1ZnwbzyY84n-bt6A1uUFSaS_ub-kfaT_9GEZUFmejlvnG-fC04c0nrwcaO78DtJ-yZmXhLODhN-9cHjAX7IufnHG7qO-7cChRNVfWKkSJBkTEG6CiY6BSQTDXzcDFSSj3wwH0fh5VP4GtIYgdQeg"/>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="pt-24 pb-12 px-10 mr-80 min-h-screen">
+<div class="max-w-[1000px] mx-auto">
+<!-- Header Section -->
+<header class="mb-10 text-center">
+<h1 class="font-headline-xl text-headline-xl mb-2">虚拟换衣体验</h1>
+<p class="font-body-main text-secondary text-body-main">上传您的照片和服饰，即刻预览穿着效果</p>
+</header>
+<!-- Step Progress -->
+<div class="flex items-center justify-center gap-12 mb-12">
+<div class="flex items-center gap-3">
+<span class="w-8 h-8 rounded-full bg-primary-container text-white flex items-center justify-center font-label-bold text-label-bold">1</span>
+<span class="font-label-bold text-label-bold text-on-surface">上传人物图片</span>
+</div>
+<div class="w-16 h-px bg-outline-variant"></div>
+<div class="flex items-center gap-3">
+<span class="w-8 h-8 rounded-full bg-outline-variant text-white flex items-center justify-center font-label-bold text-label-bold">2</span>
+<span class="font-label-bold text-label-bold text-secondary">上传服饰图片</span>
+</div>
+</div>
+<!-- Upload Zone Bento Grid -->
+<div class="grid grid-cols-2 gap-8 mb-12">
+<!-- Person Upload -->
+<div class="bg-white rounded-[20px] p-8 card-shadow flex flex-col items-center">
+<div class="w-full aspect-[3/4] upload-dashed rounded-[20px] flex flex-col items-center justify-center mb-6 bg-surface-container-low transition-all hover:bg-surface-container">
+<span class="material-symbols-outlined text-4xl text-outline mb-4">person_add</span>
+<p class="font-label-bold text-label-bold text-on-surface mb-1">第一步：上传人物</p>
+<p class="font-label-subtle text-label-subtle text-secondary px-6 text-center">点击或拖拽JPG/PNG格式照片</p>
+</div>
+<div class="w-full space-y-4">
+<button class="w-full py-3 bg-secondary-container hover:bg-outline-variant transition-colors text-on-secondary-fixed rounded-xl font-label-bold flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-lg">upload</span>
+                            选择照片
+                        </button>
+<div class="p-4 bg-surface-container-low rounded-xl">
+<p class="font-label-bold text-[11px] uppercase text-secondary mb-2 tracking-wider">上传建议</p>
+<ul class="space-y-1">
+<li class="font-label-subtle text-label-subtle text-secondary flex items-start gap-2">
+<span class="material-symbols-outlined text-[14px] text-primary">check_circle</span>
+                                    正面全身或半身照，光线充足
+                                </li>
+<li class="font-label-subtle text-label-subtle text-secondary flex items-start gap-2">
+<span class="material-symbols-outlined text-[14px] text-primary">check_circle</span>
+                                    避免过于宽松或遮挡身体的衣物
+                                </li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Clothing Upload -->
+<div class="bg-white rounded-[20px] p-8 card-shadow flex flex-col items-center">
+<div class="w-full aspect-[3/4] upload-dashed rounded-[20px] flex flex-col items-center justify-center mb-6 bg-surface-container-low transition-all hover:bg-surface-container">
+<span class="material-symbols-outlined text-4xl text-outline mb-4">checkroom</span>
+<p class="font-label-bold text-label-bold text-on-surface mb-1">第二步：上传服饰</p>
+<p class="font-label-subtle text-label-subtle text-secondary px-6 text-center">选择您想要试穿的单品图片</p>
+</div>
+<div class="w-full space-y-4">
+<button class="w-full py-3 bg-secondary-container hover:bg-outline-variant transition-colors text-on-secondary-fixed rounded-xl font-label-bold flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-lg">add_photo_alternate</span>
+                            选择服饰
+                        </button>
+<div class="p-4 bg-surface-container-low rounded-xl">
+<p class="font-label-bold text-[11px] uppercase text-secondary mb-2 tracking-wider">图片要求</p>
+<ul class="space-y-1">
+<li class="font-label-subtle text-label-subtle text-secondary flex items-start gap-2">
+<span class="material-symbols-outlined text-[14px] text-primary">check_circle</span>
+                                    建议使用纯色背景的平铺图
+                                </li>
+<li class="font-label-subtle text-label-subtle text-secondary flex items-start gap-2">
+<span class="material-symbols-outlined text-[14px] text-primary">check_circle</span>
+                                    确保服饰细节清晰完整
+                                </li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<!-- Central Action -->
+<div class="flex justify-center">
+<button class="group px-10 py-5 bg-primary-container hover:bg-primary transition-all rounded-full flex items-center gap-3 shadow-lg shadow-primary/20 transform active:scale-95">
+<span class="font-label-bold text-lg text-white">开始生成试穿图</span>
+<span class="material-symbols-outlined text-white group-hover:translate-x-1 transition-transform">auto_awesome</span>
+</button>
+</div>
+</div>
+</main>
+<!-- SideNavBar (Result Preview Sidebar) -->
+<aside class="fixed right-0 top-16 h-[calc(100vh-64px)] w-80 bg-white border-l border-slate-100 shadow-2xl flex flex-col p-6 gap-6">
+<header class="flex flex-col gap-1">
+<h2 class="text-lg font-semibold text-slate-900">生成结果预览</h2>
+<p class="font-['Inter'] text-xs font-medium text-slate-500">管理生成资源与输出</p>
+</header>
+<!-- Preview Area -->
+<div class="flex-1 rounded-2xl bg-surface-container-low border border-slate-100 overflow-hidden flex flex-col relative group">
+<div class="flex-1 flex flex-col items-center justify-center text-center p-6">
+<span class="material-symbols-outlined text-5xl text-outline-variant mb-4">image_search</span>
+<p class="text-sm font-medium text-slate-400">生成的图片将在这里显示</p>
+</div>
+<!-- Progress Overlay (Mockup) -->
+<div class="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur rounded-xl p-3 border border-slate-100 hidden">
+<div class="flex justify-between text-[10px] font-bold text-primary mb-1">
+<span>AI 正在渲染细节...</span>
+<span>75%</span>
+</div>
+<div class="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-3/4"></div>
+</div>
+</div>
+</div>
+<!-- Materials Section -->
+<section class="space-y-3">
+<h3 class="text-[11px] font-bold uppercase text-slate-400 tracking-widest">当前素材</h3>
+<div class="grid grid-cols-2 gap-3">
+<div class="aspect-square rounded-xl bg-slate-50 border border-slate-100 overflow-hidden group cursor-pointer hover:border-primary/30 transition-colors">
+<img alt="Person thumbnail" class="w-full h-full object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 transition-all" data-alt="full length studio shot of a fashion model posing in minimal white background with soft studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEBWT_vu9is9VSG2Jke0m02S4uOlmyIQqX6BFDFJIGugYM_g02K5cHyID_0mAz-1F3pyUTY6UAa7-JtWB1VfTJctIeh6mUQvHolHJsV0KX37sMr6x1uN7D1ouubx-tA9TpE9VXc73Efh7LfUU3J3neiu4ksd3AzYcZdLCzLHePDhNuj7a6vMgekzRuxrlEe4ctxnuczgQOe2ZrADUp8j-4PZkA_zBj5V4CHdLMVoxHRTKe5GLneIcI1mBFyfIrPoZEbce8aQFtjw"/>
+</div>
+<div class="aspect-square rounded-xl bg-slate-50 border border-slate-100 overflow-hidden group cursor-pointer hover:border-primary/30 transition-colors">
+<img alt="Clothing thumbnail" class="w-full h-full object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 transition-all" data-alt="flat lay of a premium white designer sweater on a neutral background with clean sharp details" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCxmsmcCa7hpLpPmqYtygaWa4G-TgjDYppxaLlzrjGQgN8qhn_eMnQcAn5dpucYk4WcJ_HOLeTaweQjmcxcdGOSKCRsLqXa6t9zNqbtW3uqSoLfNwlbG8vc_F0NZkzmK601Xwur5tY7jNCgV6sIvPA5R2tTehqdOuMuGp5UcM-wb_LtcV5xYuVvH8ZF56wlEqgN0koHnfWEAt_9V3E5keUe5Q99s1edNIn09-2LNM7theqOIIapWPBCYdEFxnph09OVcCl6B5q6Eg"/>
+</div>
+</div>
+</section>
+<!-- Actions -->
+<div class="mt-auto space-y-3 pt-6 border-t border-slate-50">
+<button class="w-full py-4 bg-primary text-white rounded-xl font-label-bold flex items-center justify-center gap-2 hover:translate-x-1 transition-transform duration-200 shadow-lg shadow-primary/10">
+<span class="material-symbols-outlined text-lg">download</span>
+                下载高清结果
+            </button>
+<button class="w-full py-3 bg-white text-slate-600 border border-slate-200 rounded-xl font-label-bold flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors">
+<span class="material-symbols-outlined text-lg">refresh</span>
+                重新生成
+            </button>
+</div>
+<!-- History/Presets Tabs -->
+<div class="flex items-center justify-between px-2 pt-2">
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined">history</span>
+<span class="text-[10px] font-bold">历史</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined">tune</span>
+<span class="text-[10px] font-bold">预设</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined">texture</span>
+<span class="text-[10px] font-bold">材质</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined">download</span>
+<span class="text-[10px] font-bold">导出</span>
+</button>
+</div>
+</aside>
+</body></html>
