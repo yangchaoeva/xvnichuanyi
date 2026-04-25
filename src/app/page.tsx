@@ -289,9 +289,12 @@ export default function Home() {
   const [status, setStatus] = useState<UIState>(UI_STATES.IDLE);
   const [personImage, setPersonImage] = useState<string | null>(null);
   const [garmentImage, setGarmentImage] = useState<string | null>(null);
+  const [personImageUrl, setPersonImageUrl] = useState<string | null>(null);
+  const [garmentImageUrl, setGarmentImageUrl] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [pollingTaskId, setPollingTaskId] = useState<string | null>(null);
+  const [isUploadingAssets, setIsUploadingAssets] = useState(false);
 
   const personInputRef = useRef<HTMLInputElement>(null);
   const garmentInputRef = useRef<HTMLInputElement>(null);
@@ -299,7 +302,7 @@ export default function Home() {
   const step2Ref = useRef<HTMLDivElement>(null);
   const step3Ref = useRef<HTMLDivElement>(null);
 
-  const isBusy = status === UI_STATES.UPLOADING || status === UI_STATES.PROCESSING;
+  const isBusy = isUploadingAssets || status === UI_STATES.UPLOADING || status === UI_STATES.PROCESSING;
   const isReady = Boolean(personImage && garmentImage);
   const currentStep = !personImage ? 1 : !garmentImage ? 2 : 3;
   const isGarmentLocked = !personImage;
@@ -331,12 +334,15 @@ export default function Home() {
   const handleSetPerson = (next: string | null) => {
     handleResetTaskState();
     setPersonImage(next);
+    setPersonImageUrl(null);
     if (!next) setGarmentImage(null);
+    if (!next) setGarmentImageUrl(null);
   };
 
   const handleSetGarment = (next: string | null) => {
     handleResetTaskState();
     setGarmentImage(next);
+    setGarmentImageUrl(null);
   };
 
   const readFileAsDataUrl = (file: File) =>
@@ -354,25 +360,78 @@ export default function Home() {
       reader.readAsDataURL(file);
     });
 
+  const uploadImageFile = async (file: File, kind: UploadCardKind) => {
+    const maxBytes = 1 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      throw new Error('图片过大：请上传不超过 1MB 的图片');
+    }
+
+    const formData = new FormData();
+    formData.set('kind', kind);
+    formData.set('file', file);
+
+    const res = await fetch('/api/upload', { method: 'POST', body: formData });
+    const raw = await res.text();
+    const payload = (() => {
+      try {
+        return JSON.parse(raw) as { url?: string; error?: string };
+      } catch {
+        return null;
+      }
+    })();
+
+    if (!res.ok) {
+      throw new Error(payload?.error || raw || '上传失败');
+    }
+
+    if (!payload?.url) {
+      throw new Error('上传失败：缺少图片 URL');
+    }
+
+    return payload.url;
+  };
+
+  const handleLoadAndUpload = async (file: File, kind: UploadCardKind) => {
+    setErrorMsg(null);
+    setIsUploadingAssets(true);
+
+    try {
+      const previewDataUrl = await readFileAsDataUrl(file);
+      if (kind === 'person') {
+        handleSetPerson(previewDataUrl);
+      } else {
+        handleSetGarment(previewDataUrl);
+      }
+
+      const uploadedUrl = await uploadImageFile(file, kind);
+
+      if (kind === 'person') {
+        setPersonImageUrl(uploadedUrl);
+      } else {
+        setGarmentImageUrl(uploadedUrl);
+      }
+    } finally {
+      setIsUploadingAssets(false);
+    }
+  };
+
   const handleImageUpload = async (
     event: ChangeEvent<HTMLInputElement>,
-    onLoaded: (dataUrl: string) => void
+    kind: UploadCardKind
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     try {
-      const dataUrl = await readFileAsDataUrl(file);
-      onLoaded(dataUrl);
+      await handleLoadAndUpload(file, kind);
     } catch (error: any) {
       setErrorMsg(error.message || '读取图片失败');
     }
   };
 
-  const handleDroppedFile = async (file: File, onLoaded: (dataUrl: string) => void) => {
+  const handleDroppedFile = async (file: File, kind: UploadCardKind) => {
     try {
-      const dataUrl = await readFileAsDataUrl(file);
-      onLoaded(dataUrl);
+      await handleLoadAndUpload(file, kind);
     } catch (error: any) {
       setErrorMsg(error.message || '读取图片失败');
     }
@@ -382,6 +441,10 @@ export default function Home() {
     if (isBusy) return;
     if (!isReady) {
       setErrorMsg('请上传人物图片和服装图片');
+      return;
+    }
+    if (!personImageUrl || !garmentImageUrl) {
+      setErrorMsg('图片正在上传，请稍后再生成');
       return;
     }
 
@@ -394,15 +457,22 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          personBase64: personImage,
-          garmentBase64: garmentImage,
+          personUrl: personImageUrl,
+          garmentUrl: garmentImageUrl,
           mode: 'realistic'
         })
       });
 
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || '创建任务失败');
+        const raw = await res.text();
+        const errorData = (() => {
+          try {
+            return JSON.parse(raw) as { error?: string };
+          } catch {
+            return null;
+          }
+        })();
+        throw new Error(errorData?.error || raw || '创建任务失败');
       }
 
       const { taskId } = await res.json();
@@ -463,10 +533,13 @@ export default function Home() {
   const handleReset = () => {
     handleSetPerson(null);
     setGarmentImage(null);
+    setPersonImageUrl(null);
+    setGarmentImageUrl(null);
     setResultImage(null);
     setStatus(UI_STATES.IDLE);
     setErrorMsg(null);
     setPollingTaskId(null);
+    setIsUploadingAssets(false);
 
     if (personInputRef.current) personInputRef.current.value = '';
     if (garmentInputRef.current) garmentInputRef.current.value = '';
@@ -557,7 +630,7 @@ export default function Home() {
         className="hidden"
         ref={personInputRef}
         onChange={(event) => {
-          void handleImageUpload(event, (dataUrl) => handleSetPerson(dataUrl));
+          void handleImageUpload(event, 'person');
         }}
       />
       <input
@@ -566,7 +639,7 @@ export default function Home() {
         className="hidden"
         ref={garmentInputRef}
         onChange={(event) => {
-          void handleImageUpload(event, (dataUrl) => handleSetGarment(dataUrl));
+          void handleImageUpload(event, 'garment');
         }}
       />
 
@@ -613,7 +686,7 @@ export default function Home() {
                 onPick={handleOpenPersonPicker}
                 onClear={() => handleSetPerson(null)}
                 onDropFile={(file) => {
-                  void handleDroppedFile(file, (dataUrl) => handleSetPerson(dataUrl));
+                  void handleDroppedFile(file, 'person');
                 }}
               />
             </div>
@@ -632,7 +705,7 @@ export default function Home() {
                 onPick={handleOpenGarmentPicker}
                 onClear={() => handleSetGarment(null)}
                 onDropFile={(file) => {
-                  void handleDroppedFile(file, (dataUrl) => handleSetGarment(dataUrl));
+                  void handleDroppedFile(file, 'garment');
                 }}
               />
             </div>
@@ -645,7 +718,9 @@ export default function Home() {
               disabled={isBusy || !isReady}
             >
               <span>
-                {status === UI_STATES.UPLOADING
+                {isUploadingAssets
+                  ? '上传素材中…'
+                  : status === UI_STATES.UPLOADING
                   ? '上传中…'
                   : status === UI_STATES.PROCESSING
                     ? 'AI 正在生成中…'

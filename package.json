@@ -13,6 +13,7 @@
     "migrate:tasks": "node scripts/migrate-sqlite-to-neon.mjs"
   },
   "dependencies": {
+    "@vercel/blob": "^1.1.1",
     "drizzle-orm": "^0.44.4",
     "next": "14.2.3",
     "pg": "^8.16.3",
