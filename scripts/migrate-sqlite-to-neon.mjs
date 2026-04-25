@@ -1,7 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
 import { Pool } from 'pg';
 
 const tryReadTextFile = (filePath) => {
@@ -103,9 +101,20 @@ const main = async () => {
     throw new Error('MIGRATE_BATCH_SIZE must be a positive number');
   }
 
+  const sqlite3Module = await import('sqlite3');
+  const sqliteModule = await import('sqlite');
+
+  const sqlite3Default = sqlite3Module.default ?? sqlite3Module;
+  const sqlite3Database = sqlite3Default.Database;
+  const open = sqliteModule.open;
+
+  if (!sqlite3Database || !open) {
+    throw new Error('SQLite dependencies are not available. Install sqlite and sqlite3 to run this migration script.');
+  }
+
   const sqliteDb = await open({
     filename: sqlitePath,
-    driver: sqlite3.Database
+    driver: sqlite3Database
   });
 
   const sqliteCountRow = await sqliteDb.get('SELECT COUNT(*) AS count FROM tasks');
