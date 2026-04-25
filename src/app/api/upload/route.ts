@@ -19,14 +19,15 @@ const normalizeKind = (raw: unknown) => {
   return null;
 };
 
-const getBlobToken = () => {
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) throw new Error('Missing BLOB_READ_WRITE_TOKEN');
-  return token;
-};
-
 export async function POST(req: Request) {
   try {
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      return NextResponse.json(
+        { error: 'Missing BLOB_READ_WRITE_TOKEN. Create a Vercel Blob store and add its read-write token to this deployment.' },
+        { status: 500 }
+      );
+    }
+
     const formData = await req.formData();
     const kind = normalizeKind(formData.get('kind'));
     const file = formData.get('file');
@@ -56,17 +57,16 @@ export async function POST(req: Request) {
     const id = typeof crypto?.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const blobPath = `uploads/${kind}_${id}.${ext}`;
 
-    const token = getBlobToken();
     const result = await put(blobPath, buffer, {
       access: 'public',
       addRandomSuffix: false,
-      contentType: file.type,
-      token
+      contentType: file.type
     });
 
     return NextResponse.json({ url: result.url });
   } catch (error: any) {
     const message = error?.message || 'Upload failed';
+    console.error('[upload] failed', { errorName: error?.name, errorMessage: message });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
