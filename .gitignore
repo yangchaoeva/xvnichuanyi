@@ -1,3 +1,17 @@
 node_modules
 .env
 .env.*
+.next
+out
+.vercel
+.turbo
+dist
+coverage
+
+/tasks.db
+*.db
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
