@@ -1,20 +1,38 @@
 'use client';
 
+import { Turnstile } from '@marsidev/react-turnstile';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { getTurnstileSiteKey } from '@/lib/turnstile';
 
 export default function RegisterPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [turnstileSiteKey, setTurnstileSiteKey] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    setTurnstileSiteKey(getTurnstileSiteKey(window.location.hostname));
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isSubmitting) return;
+
+    if (!turnstileSiteKey) {
+      setErrorMsg('人机验证未配置，请联系管理员');
+      return;
+    }
+    if (!turnstileToken) {
+      setErrorMsg('请先完成人机验证');
+      return;
+    }
+
     setErrorMsg(null);
     setIsSubmitting(true);
 
@@ -22,11 +40,12 @@ export default function RegisterPage() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, username, password })
+        body: JSON.stringify({ email, username, password, turnstileToken })
       });
       const payload = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) {
         setErrorMsg(payload?.error || '注册失败');
+        setTurnstileToken('');
         return;
       }
 
@@ -83,11 +102,30 @@ export default function RegisterPage() {
             />
           </label>
 
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+            {turnstileSiteKey ? (
+              <Turnstile
+                siteKey={turnstileSiteKey}
+                onSuccess={(token) => {
+                  setTurnstileToken(token);
+                }}
+                onExpire={() => {
+                  setTurnstileToken('');
+                }}
+                onError={() => {
+                  setTurnstileToken('');
+                }}
+              />
+            ) : (
+              <div className="text-sm text-amber-700">Turnstile Site Key 未配置，请检查本地或线上环境变量</div>
+            )}
+          </div>
+
           {errorMsg ? <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{errorMsg}</div> : null}
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !turnstileToken || !turnstileSiteKey}
             className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? '注册中...' : '注册并登录'}

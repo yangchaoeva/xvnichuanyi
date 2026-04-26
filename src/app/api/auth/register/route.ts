@@ -7,9 +7,59 @@ import {
   normalizePassword,
   normalizeUsername
 } from '@/lib/auth';
+import { getTurnstileSecretKey } from '@/lib/turnstile';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+const getClientIp = (req: Request) => {
+  const xForwardedFor = req.headers.get('x-forwarded-for');
+  if (xForwardedFor) {
+    const first = xForwardedFor.split(',')[0]?.trim();
+    if (first) return first;
+  }
+  const xRealIp = req.headers.get('x-real-ip');
+  if (xRealIp) return xRealIp.trim();
+  return null;
+};
+
+const verifyTurnstileToken = async (req: Request, token: string) => {
+  const secret = getTurnstileSecretKey(req);
+  if (!secret) {
+    throw new Error('TURNSTILE secret key is missing');
+  }
+
+  const formData = new URLSearchParams();
+  formData.set('secret', secret);
+  formData.set('response', token);
+  const clientIp = getClientIp(req);
+  if (clientIp) {
+    formData.set('remoteip', clientIp);
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+
+  try {
+    const verifyResponse = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString(),
+      signal: controller.signal
+    });
+
+    if (!verifyResponse.ok) {
+      return false;
+    }
+
+    const verifyResult = (await verifyResponse.json()) as { success?: boolean };
+    return verifyResult.success === true;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
+};
 
 const getAdminEmails = () => {
   const raw = process.env.ADMIN_EMAILS;
@@ -25,9 +75,19 @@ const getAdminEmails = () => {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const turnstileToken = typeof body?.turnstileToken === 'string' ? body.turnstileToken.trim() : '';
     const email = normalizeEmail(body?.email);
     const username = normalizeUsername(body?.username);
     const password = normalizePassword(body?.password);
+
+    if (!turnstileToken) {
+      return NextResponse.json({ error: '请先完成人机验证' }, { status: 400 });
+    }
+
+    const turnstileOk = await verifyTurnstileToken(req, turnstileToken);
+    if (!turnstileOk) {
+      return NextResponse.json({ error: '人机验证失败，请重试' }, { status: 403 });
+    }
 
     if (!email) {
       return NextResponse.json({ error: '邮箱格式不正确' }, { status: 400 });
