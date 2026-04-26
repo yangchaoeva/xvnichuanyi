@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getTaskById } from '@/lib/db';
+import { getCurrentUser } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
 export async function GET(req: Request) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: '请先登录' }, { status: 401 });
+  }
+
   const { searchParams } = new URL(req.url);
   const taskId = searchParams.get('taskId');
 
@@ -16,6 +22,9 @@ export async function GET(req: Request) {
 
     if (!task) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+    }
+    if (task.userId && task.userId !== user.id && user.role !== 'admin') {
+      return NextResponse.json({ error: '无权限访问该任务' }, { status: 403 });
     }
 
     return NextResponse.json({

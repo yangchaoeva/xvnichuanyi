@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { createPendingTask, setTaskFailed, setTaskProcessing, setTaskSuccess } from '@/lib/db';
 import { saveBase64Image } from '@/lib/upload';
+import { getCurrentUser } from '@/lib/auth';
 import {
   ARK_DEFAULT_MODEL,
   ARK_DEFAULT_PROMPT,
@@ -129,6 +130,11 @@ async function processTask(
 
 export async function POST(req: Request) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: '请先登录' }, { status: 401 });
+    }
+
     const body = await req.json();
     const { personBase64, garmentBase64, personUrl: personInputUrl, garmentUrl: garmentInputUrl, mode = 'realistic' } = body;
 
@@ -152,6 +158,7 @@ export async function POST(req: Request) {
 
     await createPendingTask({
       id: taskId,
+      userId: user.id,
       status: 'pending',
       personUrl: storedPersonUrl,
       garmentUrl: storedGarmentUrl,

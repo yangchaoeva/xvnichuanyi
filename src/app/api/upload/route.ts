@@ -1,5 +1,6 @@
 import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
+import { getCurrentUser } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
@@ -21,6 +22,11 @@ const normalizeKind = (raw: unknown) => {
 
 export async function POST(req: Request) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: '请先登录' }, { status: 401 });
+    }
+
     if (!process.env.BLOB_READ_WRITE_TOKEN) {
       return NextResponse.json(
         { error: 'Missing BLOB_READ_WRITE_TOKEN. Create a Vercel Blob store and add its read-write token to this deployment.' },

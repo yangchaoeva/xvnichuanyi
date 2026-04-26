@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 
 const cn = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ');
 
@@ -14,6 +15,12 @@ const UI_STATES = {
 
 type UIState = typeof UI_STATES[keyof typeof UI_STATES];
 type UploadCardKind = 'person' | 'garment';
+type AuthUser = {
+  id: string;
+  email: string;
+  username: string;
+  role: 'user' | 'admin';
+};
 
 type StepDefinition = {
   step: 1 | 2 | 3;
@@ -286,6 +293,7 @@ const UploadCard = ({
 };
 
 export default function Home() {
+  const router = useRouter();
   const [status, setStatus] = useState<UIState>(UI_STATES.IDLE);
   const [personImage, setPersonImage] = useState<string | null>(null);
   const [garmentImage, setGarmentImage] = useState<string | null>(null);
@@ -295,6 +303,7 @@ export default function Home() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [pollingTaskId, setPollingTaskId] = useState<string | null>(null);
   const [isUploadingAssets, setIsUploadingAssets] = useState(false);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
 
   const personInputRef = useRef<HTMLInputElement>(null);
   const garmentInputRef = useRef<HTMLInputElement>(null);
@@ -485,6 +494,31 @@ export default function Home() {
     }
   };
 
+  const handleLoadCurrentUser = useCallback(async () => {
+    const res = await fetch('/api/auth/me');
+    if (!res.ok) {
+      router.replace('/login');
+      return;
+    }
+    const data = (await res.json()) as { user?: AuthUser };
+    if (!data.user) {
+      router.replace('/login');
+      return;
+    }
+    setCurrentUser(data.user);
+  }, [router]);
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    setCurrentUser(null);
+    router.replace('/login');
+    router.refresh();
+  };
+
+  useEffect(() => {
+    void handleLoadCurrentUser();
+  }, [handleLoadCurrentUser]);
+
   useEffect(() => {
     if (!pollingTaskId || status !== UI_STATES.PROCESSING) return;
 
@@ -603,23 +637,22 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-4">
-            <button
-              type="button"
-              aria-label="帮助"
-              className="rounded-full p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
-            >
-              <Icon name="help" className="text-xl" />
-            </button>
-            <button
-              type="button"
-              aria-label="设置"
-              className="rounded-full p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
-            >
-              <Icon name="settings" className="text-xl" />
-            </button>
-            <div className="grid h-8 w-8 place-items-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
-              AI
+            <div className="hidden text-right sm:block">
+              <div className="text-xs text-slate-500">已登录</div>
+              <div className="text-sm font-semibold text-slate-900">
+                {currentUser ? `${currentUser.username}${currentUser.role === 'admin' ? ' · 管理员' : ''}` : '加载中...'}
+              </div>
             </div>
+            <button
+              type="button"
+              aria-label="退出登录"
+              onClick={() => {
+                void handleLogout();
+              }}
+              className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+            >
+              退出
+            </button>
           </div>
         </div>
       </nav>
