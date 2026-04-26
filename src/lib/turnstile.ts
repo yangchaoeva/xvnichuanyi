@@ -15,7 +15,7 @@ export const getTurnstileSiteKey = (hostname: string | null | undefined) => {
     return localSiteKey;
   }
 
-  return defaultSiteKey || localSiteKey;
+  return defaultSiteKey;
 };
 
 const getHostnameFromOrigin = (origin: string | null) => {
@@ -62,5 +62,5 @@ export const getTurnstileSecretKey = (request: Request) => {
     return localSecretKey;
   }
 
-  return defaultSecretKey || localSecretKey;
+  return defaultSecretKey;
 };
