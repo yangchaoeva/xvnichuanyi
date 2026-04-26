@@ -69,25 +69,25 @@ const ensureNeonSchema = async () => {
         id TEXT PRIMARY KEY,
         email TEXT NOT NULL UNIQUE,
         username TEXT NOT NULL UNIQUE,
-        "passwordHash" TEXT NOT NULL,
+        password_hash TEXT NOT NULL,
         role user_role NOT NULL DEFAULT 'user',
-        "createdAt" BIGINT NOT NULL,
-        "updatedAt" BIGINT NOT NULL,
-        "lastLoginAt" BIGINT
+        created_at BIGINT NOT NULL,
+        updated_at BIGINT NOT NULL,
+        last_login_at BIGINT
       );
     `);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS auth_sessions (
         id TEXT PRIMARY KEY,
-        "userId" TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        "tokenHash" TEXT NOT NULL UNIQUE,
-        "rememberMe" BOOLEAN NOT NULL DEFAULT false,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token_hash TEXT NOT NULL UNIQUE,
+        remember_me BOOLEAN NOT NULL DEFAULT false,
         ip TEXT,
-        "userAgent" TEXT,
-        "expiresAt" BIGINT NOT NULL,
-        "createdAt" BIGINT NOT NULL,
-        "revokedAt" BIGINT
+        user_agent TEXT,
+        expires_at BIGINT NOT NULL,
+        created_at BIGINT NOT NULL,
+        revoked_at BIGINT
       );
     `);
 
@@ -97,35 +97,178 @@ const ensureNeonSchema = async () => {
         email TEXT NOT NULL,
         ip TEXT,
         success BOOLEAN NOT NULL,
-        "createdAt" BIGINT NOT NULL
+        created_at BIGINT NOT NULL
       );
     `);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS tasks (
         id TEXT PRIMARY KEY,
-        "userId" TEXT REFERENCES users(id) ON DELETE SET NULL,
+        user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
         status TEXT NOT NULL,
-        "personUrl" TEXT,
-        "garmentUrl" TEXT,
+        person_url TEXT,
+        garment_url TEXT,
         mode TEXT,
-        "resultUrl" TEXT,
+        result_url TEXT,
         error TEXT,
-        "retryCount" INTEGER DEFAULT 0,
-        "createdAt" BIGINT NOT NULL
+        retry_count INTEGER DEFAULT 0,
+        created_at BIGINT NOT NULL
       );
     `);
 
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_tasks_createdAt ON tasks ("createdAt");`);
+    await pool.query(`
+      DO $$ BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'passwordHash')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'password_hash') THEN
+          ALTER TABLE users RENAME COLUMN "passwordHash" TO password_hash;
+        END IF;
+
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'createdAt')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'created_at') THEN
+          ALTER TABLE users RENAME COLUMN "createdAt" TO created_at;
+        END IF;
+
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'updatedAt')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'updated_at') THEN
+          ALTER TABLE users RENAME COLUMN "updatedAt" TO updated_at;
+        END IF;
+
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'lastLoginAt')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'last_login_at') THEN
+          ALTER TABLE users RENAME COLUMN "lastLoginAt" TO last_login_at;
+        END IF;
+      END $$;
+    `);
+
+    await pool.query(`
+      DO $$ BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'auth_sessions' AND column_name = 'userId')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'auth_sessions' AND column_name = 'user_id') THEN
+          ALTER TABLE auth_sessions RENAME COLUMN "userId" TO user_id;
+        END IF;
+
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'auth_sessions' AND column_name = 'tokenHash')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'auth_sessions' AND column_name = 'token_hash') THEN
+          ALTER TABLE auth_sessions RENAME COLUMN "tokenHash" TO token_hash;
+        END IF;
+
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'auth_sessions' AND column_name = 'rememberMe')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'auth_sessions' AND column_name = 'remember_me') THEN
+          ALTER TABLE auth_sessions RENAME COLUMN "rememberMe" TO remember_me;
+        END IF;
+
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'auth_sessions' AND column_name = 'userAgent')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'auth_sessions' AND column_name = 'user_agent') THEN
+          ALTER TABLE auth_sessions RENAME COLUMN "userAgent" TO user_agent;
+        END IF;
+
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'auth_sessions' AND column_name = 'expiresAt')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'auth_sessions' AND column_name = 'expires_at') THEN
+          ALTER TABLE auth_sessions RENAME COLUMN "expiresAt" TO expires_at;
+        END IF;
+
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'auth_sessions' AND column_name = 'createdAt')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'auth_sessions' AND column_name = 'created_at') THEN
+          ALTER TABLE auth_sessions RENAME COLUMN "createdAt" TO created_at;
+        END IF;
+
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'auth_sessions' AND column_name = 'revokedAt')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'auth_sessions' AND column_name = 'revoked_at') THEN
+          ALTER TABLE auth_sessions RENAME COLUMN "revokedAt" TO revoked_at;
+        END IF;
+      END $$;
+    `);
+
+    await pool.query(`
+      DO $$ BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'auth_login_attempts' AND column_name = 'createdAt')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'auth_login_attempts' AND column_name = 'created_at') THEN
+          ALTER TABLE auth_login_attempts RENAME COLUMN "createdAt" TO created_at;
+        END IF;
+      END $$;
+    `);
+
+    await pool.query(`
+      DO $$ BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tasks' AND column_name = 'userId')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tasks' AND column_name = 'user_id') THEN
+          ALTER TABLE tasks RENAME COLUMN "userId" TO user_id;
+        END IF;
+
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tasks' AND column_name = 'personUrl')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tasks' AND column_name = 'person_url') THEN
+          ALTER TABLE tasks RENAME COLUMN "personUrl" TO person_url;
+        END IF;
+
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tasks' AND column_name = 'garmentUrl')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tasks' AND column_name = 'garment_url') THEN
+          ALTER TABLE tasks RENAME COLUMN "garmentUrl" TO garment_url;
+        END IF;
+
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tasks' AND column_name = 'resultUrl')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tasks' AND column_name = 'result_url') THEN
+          ALTER TABLE tasks RENAME COLUMN "resultUrl" TO result_url;
+        END IF;
+
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tasks' AND column_name = 'retryCount')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tasks' AND column_name = 'retry_count') THEN
+          ALTER TABLE tasks RENAME COLUMN "retryCount" TO retry_count;
+        END IF;
+
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tasks' AND column_name = 'createdAt')
+          AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tasks' AND column_name = 'created_at') THEN
+          ALTER TABLE tasks RENAME COLUMN "createdAt" TO created_at;
+        END IF;
+      END $$;
+    `);
+
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at BIGINT;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at BIGINT;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at BIGINT;`);
+    await pool.query(`ALTER TABLE auth_sessions ADD COLUMN IF NOT EXISTS user_id TEXT;`);
+    await pool.query(`ALTER TABLE auth_sessions ADD COLUMN IF NOT EXISTS token_hash TEXT;`);
+    await pool.query(`ALTER TABLE auth_sessions ADD COLUMN IF NOT EXISTS remember_me BOOLEAN DEFAULT false;`);
+    await pool.query(`ALTER TABLE auth_sessions ADD COLUMN IF NOT EXISTS user_agent TEXT;`);
+    await pool.query(`ALTER TABLE auth_sessions ADD COLUMN IF NOT EXISTS expires_at BIGINT;`);
+    await pool.query(`ALTER TABLE auth_sessions ADD COLUMN IF NOT EXISTS created_at BIGINT;`);
+    await pool.query(`ALTER TABLE auth_sessions ADD COLUMN IF NOT EXISTS revoked_at BIGINT;`);
+    await pool.query(`ALTER TABLE auth_login_attempts ADD COLUMN IF NOT EXISTS created_at BIGINT;`);
+    await pool.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS user_id TEXT;`);
+    await pool.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS person_url TEXT;`);
+    await pool.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS garment_url TEXT;`);
+    await pool.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS result_url TEXT;`);
+    await pool.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0;`);
+    await pool.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS created_at BIGINT;`);
+
+    await pool.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'auth_sessions_user_id_fkey') THEN
+          ALTER TABLE auth_sessions
+            ADD CONSTRAINT auth_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+        END IF;
+      END $$;
+    `);
+
+    await pool.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'tasks_user_id_fkey') THEN
+          ALTER TABLE tasks
+            ADD CONSTRAINT tasks_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
+        END IF;
+      END $$;
+    `);
+
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_tasks_created_at ON tasks (created_at);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks (status);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_tasks_userId ON tasks ("userId");`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_tasks_user_id ON tasks (user_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_auth_sessions_tokenHash ON auth_sessions ("tokenHash");`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_auth_sessions_userId ON auth_sessions ("userId");`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_auth_sessions_expiresAt ON auth_sessions ("expiresAt");`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_auth_sessions_token_hash ON auth_sessions (token_hash);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_auth_sessions_user_id ON auth_sessions (user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_auth_sessions_expires_at ON auth_sessions (expires_at);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_auth_login_attempts_email ON auth_login_attempts (email);`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_auth_login_attempts_createdAt ON auth_login_attempts ("createdAt");`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_auth_login_attempts_created_at ON auth_login_attempts (created_at);`);
   })();
 
   return neonSchemaReady;

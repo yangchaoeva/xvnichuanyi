@@ -1,4 +1,4 @@
-import { bigint, boolean, integer, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { bigint, boolean, integer, pgEnum, pgTable, text } from 'drizzle-orm/pg-core';
 
 export const userRoleEnum = pgEnum('user_role', ['user', 'admin']);
 
@@ -6,23 +6,23 @@ export const users = pgTable('users', {
   id: text('id').primaryKey(),
   email: text('email').notNull().unique(),
   username: text('username').notNull().unique(),
-  passwordHash: text('passwordHash').notNull(),
+  passwordHash: text('password_hash').notNull(),
   role: userRoleEnum('role').notNull().default('user'),
-  createdAt: bigint('createdAt', { mode: 'number' }).notNull(),
-  updatedAt: bigint('updatedAt', { mode: 'number' }).notNull(),
-  lastLoginAt: bigint('lastLoginAt', { mode: 'number' })
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+  updatedAt: bigint('updated_at', { mode: 'number' }).notNull(),
+  lastLoginAt: bigint('last_login_at', { mode: 'number' })
 });
 
 export const authSessions = pgTable('auth_sessions', {
   id: text('id').primaryKey(),
-  userId: text('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  tokenHash: text('tokenHash').notNull().unique(),
-  rememberMe: boolean('rememberMe').notNull().default(false),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tokenHash: text('token_hash').notNull().unique(),
+  rememberMe: boolean('remember_me').notNull().default(false),
   ip: text('ip'),
-  userAgent: text('userAgent'),
-  expiresAt: bigint('expiresAt', { mode: 'number' }).notNull(),
-  createdAt: bigint('createdAt', { mode: 'number' }).notNull(),
-  revokedAt: bigint('revokedAt', { mode: 'number' })
+  userAgent: text('user_agent'),
+  expiresAt: bigint('expires_at', { mode: 'number' }).notNull(),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+  revokedAt: bigint('revoked_at', { mode: 'number' })
 });
 
 export const authLoginAttempts = pgTable('auth_login_attempts', {
@@ -30,20 +30,20 @@ export const authLoginAttempts = pgTable('auth_login_attempts', {
   email: text('email').notNull(),
   ip: text('ip'),
   success: boolean('success').notNull(),
-  createdAt: bigint('createdAt', { mode: 'number' }).notNull()
+  createdAt: bigint('created_at', { mode: 'number' }).notNull()
 });
 
 export const tasks = pgTable('tasks', {
   id: text('id').primaryKey(),
-  userId: text('userId').references(() => users.id, { onDelete: 'set null' }),
+  userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
   status: text('status').notNull(),
-  personUrl: text('personUrl'),
-  garmentUrl: text('garmentUrl'),
+  personUrl: text('person_url'),
+  garmentUrl: text('garment_url'),
   mode: text('mode'),
-  resultUrl: text('resultUrl'),
+  resultUrl: text('result_url'),
   error: text('error'),
-  retryCount: integer('retryCount').default(0).notNull(),
-  createdAt: bigint('createdAt', { mode: 'number' }).notNull()
+  retryCount: integer('retry_count').default(0).notNull(),
+  createdAt: bigint('created_at', { mode: 'number' }).notNull()
 });
 
 export type TaskRow = typeof tasks.$inferSelect;
