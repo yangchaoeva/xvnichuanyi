@@ -2,6 +2,8 @@ const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1']);
 
 const normalizeValue = (value: string | undefined) => value?.trim() || '';
 
+export const hasTurnstileValue = (value: string | undefined) => Boolean(normalizeValue(value));
+
 export const isLocalHostname = (hostname: string | null | undefined) => {
   if (!hostname) return false;
   return LOCAL_HOSTNAMES.has(hostname.trim().toLowerCase());
@@ -53,6 +55,8 @@ const getRequestHostname = (request: Request) => {
     return null;
   }
 };
+
+export const getTurnstileRequestHostname = (request: Request) => getRequestHostname(request);
 
 export const getTurnstileSecretKey = (request: Request) => {
   const localSecretKey = normalizeValue(process.env.TURNSTILE_SECRET_KEY_LOCAL);

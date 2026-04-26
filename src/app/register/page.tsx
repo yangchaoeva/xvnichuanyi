@@ -4,20 +4,70 @@ import { Turnstile } from '@marsidev/react-turnstile';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { getTurnstileSiteKey } from '@/lib/turnstile';
+
+type TurnstileConfigResponse = {
+  ok?: boolean;
+  hostname?: string | null;
+  issue?: string | null;
+  mode?: 'local' | 'production';
+  siteKey?: string | null;
+};
+
+type TurnstileStatus = 'loading' | 'ready' | 'error';
 
 export default function RegisterPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [turnstileHostname, setTurnstileHostname] = useState('');
   const [turnstileSiteKey, setTurnstileSiteKey] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileStatus, setTurnstileStatus] = useState<TurnstileStatus>('loading');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    setTurnstileSiteKey(getTurnstileSiteKey(window.location.hostname));
+    const controller = new AbortController();
+
+    const handleLoadTurnstileConfig = async () => {
+      setTurnstileStatus('loading');
+      setTurnstileToken('');
+
+      try {
+        const response = await fetch('/api/turnstile/config', {
+          cache: 'no-store',
+          signal: controller.signal
+        });
+        const payload = (await response.json().catch(() => null)) as TurnstileConfigResponse | null;
+        const nextHostname = payload?.hostname?.trim() || window.location.hostname;
+
+        setTurnstileHostname(nextHostname);
+
+        if (!response.ok || !payload?.ok || !payload.siteKey) {
+          setTurnstileSiteKey('');
+          setTurnstileStatus('error');
+          setErrorMsg('人机验证未正确配置，当前页面无法加载 Turnstile');
+          return;
+        }
+
+        setTurnstileSiteKey(payload.siteKey);
+        setTurnstileStatus('ready');
+      } catch (error) {
+        if (controller.signal.aborted) return;
+
+        setTurnstileSiteKey('');
+        setTurnstileStatus('error');
+        setTurnstileHostname(window.location.hostname);
+        setErrorMsg('人机验证配置读取失败，请稍后刷新重试');
+      }
+    };
+
+    handleLoadTurnstileConfig();
+
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -107,6 +157,7 @@ export default function RegisterPage() {
               <Turnstile
                 siteKey={turnstileSiteKey}
                 onSuccess={(token) => {
+                    setErrorMsg(null);
                   setTurnstileToken(token);
                 }}
                 onExpire={() => {
@@ -114,18 +165,31 @@ export default function RegisterPage() {
                 }}
                 onError={() => {
                   setTurnstileToken('');
+                    setErrorMsg(
+                      turnstileHostname
+                        ? `Turnstile 加载失败，当前域名 ${turnstileHostname} 与 Cloudflare 生产配置不匹配`
+                        : 'Turnstile 加载失败，请检查当前域名与 Cloudflare 生产配置是否匹配'
+                    );
                 }}
               />
+              ) : turnstileStatus === 'loading' ? (
+                <div className="text-sm text-slate-500">正在加载人机验证...</div>
             ) : (
-              <div className="text-sm text-amber-700">Turnstile Site Key 未配置，请检查本地或线上环境变量</div>
+                <div className="space-y-1 text-sm text-amber-700">
+                  <div>Turnstile Site Key 未配置或当前域名未被允许</div>
+                  {turnstileHostname ? <div className="break-all text-slate-500">当前域名：{turnstileHostname}</div> : null}
+                </div>
             )}
           </div>
 
-          {errorMsg ? <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{errorMsg}</div> : null}
-
+          {errorMsg ? (
+            <div aria-live="polite" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {errorMsg}
+            </div>
+          ) : null}
           <button
             type="submit"
-            disabled={isSubmitting || !turnstileToken || !turnstileSiteKey}
+            disabled={isSubmitting || turnstileStatus !== 'ready' || !turnstileToken || !turnstileSiteKey}
             className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? '注册中...' : '注册并登录'}
