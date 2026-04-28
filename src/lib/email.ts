@@ -1,16 +1,23 @@
 import { Resend } from 'resend';
 
+// 获取 Resend 客户端实例
 const getResendClient = () => {
+  // 从环境变量中读取并去除空格
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) {
+    // 如果 API 密钥缺失，抛出错误
     throw new Error('RESEND_API_KEY is missing');
   }
+  // 返回新的 Resend 实例
   return new Resend(apiKey);
 };
 
+// 发送欢迎邮件
 export const sendWelcomeEmail = async (userEmail: string, userName: string) => {
+  // 获取 Resend 客户端
   const resend = getResendClient();
 
+  // 发送邮件
   const result = await resend.emails.send({
     from: '虚拟换衣 <onboarding@resend.dev>',
     to: userEmail,
@@ -26,9 +33,11 @@ export const sendWelcomeEmail = async (userEmail: string, userName: string) => {
     `
   });
 
+  // 如果发送失败，抛出错误
   if (result.error) {
     throw new Error(result.error.message || 'Failed to send welcome email');
   }
 
+  // 返回发送结果数据
   return result.data;
 };
