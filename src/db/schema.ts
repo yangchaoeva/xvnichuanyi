@@ -1,4 +1,4 @@
-import { bigint, boolean, integer, pgEnum, pgTable, text } from 'drizzle-orm/pg-core';
+import { bigint, boolean, index, integer, pgEnum, pgTable, text } from 'drizzle-orm/pg-core';
 
 export const userRoleEnum = pgEnum('user_role', ['user', 'admin']);
 
@@ -46,8 +46,27 @@ export const tasks = pgTable('tasks', {
   createdAt: bigint('created_at', { mode: 'number' }).notNull()
 });
 
+export const userAssets = pgTable(
+  'user_assets',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    url: text('url').notNull(),
+    sourceUrl: text('source_url').notNull(),
+    taskId: text('task_id').references(() => tasks.id, { onDelete: 'set null' }),
+    createdAt: bigint('created_at', { mode: 'number' }).notNull()
+  },
+  (table) => ({
+    userIdIdx: index('idx_user_assets_user_id').on(table.userId),
+    taskIdIdx: index('idx_user_assets_task_id').on(table.taskId),
+    createdAtIdx: index('idx_user_assets_created_at').on(table.createdAt)
+  })
+);
+
 export type TaskRow = typeof tasks.$inferSelect;
 export type NewTaskRow = typeof tasks.$inferInsert;
+export type UserAssetRow = typeof userAssets.$inferSelect;
+export type NewUserAssetRow = typeof userAssets.$inferInsert;
 export type UserRow = typeof users.$inferSelect;
 export type NewUserRow = typeof users.$inferInsert;
 export type AuthSessionRow = typeof authSessions.$inferSelect;

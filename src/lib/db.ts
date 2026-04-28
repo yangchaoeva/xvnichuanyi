@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { and, count, eq, gt, isNull } from 'drizzle-orm';
-import { authLoginAttempts, authSessions, tasks, users, type UserRow } from '@/db/schema';
+import { authLoginAttempts, authSessions, tasks, userAssets, users, type UserRow } from '@/db/schema';
 
 export type TaskRecord = {
   id: string;
@@ -41,7 +41,7 @@ const getNeonPool = () => {
 
 const createNeonDrizzleDb = () =>
   drizzle(getNeonPool(), {
-    schema: { tasks, users, authSessions, authLoginAttempts }
+    schema: { tasks, users, authSessions, authLoginAttempts, userAssets }
   });
 
 const getNeonDrizzleDb = () => {
@@ -112,6 +112,17 @@ const ensureNeonSchema = async () => {
         result_url TEXT,
         error TEXT,
         retry_count INTEGER DEFAULT 0,
+        created_at BIGINT NOT NULL
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_assets (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        url TEXT NOT NULL,
+        source_url TEXT NOT NULL,
+        task_id TEXT REFERENCES tasks(id) ON DELETE SET NULL,
         created_at BIGINT NOT NULL
       );
     `);
@@ -240,6 +251,11 @@ const ensureNeonSchema = async () => {
     await pool.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS result_url TEXT;`);
     await pool.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0;`);
     await pool.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS created_at BIGINT;`);
+    await pool.query(`ALTER TABLE user_assets ADD COLUMN IF NOT EXISTS user_id TEXT;`);
+    await pool.query(`ALTER TABLE user_assets ADD COLUMN IF NOT EXISTS url TEXT;`);
+    await pool.query(`ALTER TABLE user_assets ADD COLUMN IF NOT EXISTS source_url TEXT;`);
+    await pool.query(`ALTER TABLE user_assets ADD COLUMN IF NOT EXISTS task_id TEXT;`);
+    await pool.query(`ALTER TABLE user_assets ADD COLUMN IF NOT EXISTS created_at BIGINT;`);
 
     await pool.query(`
       DO $$ BEGIN
@@ -259,9 +275,30 @@ const ensureNeonSchema = async () => {
       END $$;
     `);
 
+    await pool.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'user_assets_user_id_fkey') THEN
+          ALTER TABLE user_assets
+            ADD CONSTRAINT user_assets_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+        END IF;
+      END $$;
+    `);
+
+    await pool.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'user_assets_task_id_fkey') THEN
+          ALTER TABLE user_assets
+            ADD CONSTRAINT user_assets_task_id_fkey FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL;
+        END IF;
+      END $$;
+    `);
+
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_tasks_created_at ON tasks (created_at);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks (status);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_tasks_user_id ON tasks (user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_assets_created_at ON user_assets (created_at);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_assets_user_id ON user_assets (user_id);`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_assets_task_id ON user_assets (task_id);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_auth_sessions_token_hash ON auth_sessions (token_hash);`);
@@ -288,6 +325,34 @@ export const createPendingTask = async (
     mode: task.mode,
     createdAt: task.createdAt
   });
+};
+
+type CreateUserAssetInput = {
+  userId: string;
+  url: string;
+  sourceUrl: string;
+  taskId?: string | null;
+  id?: string;
+  createdAt?: number;
+};
+
+export const createUserAsset = async (input: CreateUserAssetInput) => {
+  await ensureNeonSchema();
+  const db = getNeonDrizzleDb();
+
+  const id = input.id ?? crypto.randomUUID();
+  const createdAt = input.createdAt ?? Date.now();
+
+  await db.insert(userAssets).values({
+    id,
+    userId: input.userId,
+    url: input.url,
+    sourceUrl: input.sourceUrl,
+    taskId: input.taskId ?? null,
+    createdAt
+  });
+
+  return { id, createdAt };
 };
 
 export const setTaskProcessing = async (taskId: string) => {

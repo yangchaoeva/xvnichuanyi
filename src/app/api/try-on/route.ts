@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
-import { createPendingTask, setTaskFailed, setTaskProcessing, setTaskSuccess } from '@/lib/db';
+import { createPendingTask, createUserAsset, setTaskFailed, setTaskProcessing, setTaskSuccess } from '@/lib/db';
 import { saveBase64Image } from '@/lib/upload';
 import { getCurrentUser } from '@/lib/auth';
+import { BlobTransferError, normalizeBlobTransferErrorMessage, persistRemoteImageToBlob } from '@/lib/blob';
 import {
   ARK_DEFAULT_MODEL,
   ARK_DEFAULT_PROMPT,
@@ -36,6 +37,7 @@ const shouldFallbackToPublicUrls = (error: unknown) => {
 
 async function processTask(
   taskId: string,
+  userId: string,
   personInput: string,
   garmentInput: string,
   storedPersonUrl: string | null,
@@ -45,7 +47,7 @@ async function processTask(
   try {
     await setTaskProcessing(taskId);
 
-    console.info('[TryOnWorker] task_processing_start', { taskId, mode });
+    console.info('[TryOnWorker] task_processing_start', { taskId, userId, mode });
 
     const appPublicUrl = getAppPublicUrl();
 
@@ -100,9 +102,21 @@ async function processTask(
       throw new Error('Ark response missing result url');
     }
 
-    console.info('[TryOnWorker] task_processing_success', { taskId, resultUrl: result.url });
+    const sourceUrl = result.url;
 
-    await setTaskSuccess(taskId, result.url);
+    console.info('[TryOnWorker] task_processing_ark_success', { taskId, sourceUrl });
+
+    const persisted = await persistRemoteImageToBlob({ userId, taskId, sourceUrl });
+
+    await createUserAsset({
+      userId,
+      url: persisted.blobUrl,
+      sourceUrl,
+      taskId,
+      createdAt: persisted.meta.createdAt
+    });
+
+    await setTaskSuccess(taskId, persisted.blobUrl);
 
   } catch (error: any) {
     const mappedMessage =
@@ -116,7 +130,9 @@ async function processTask(
               ? 'Ark 无法处理当前图片输入：如使用本地上传图片，请配置 .env 的 APP_PUBLIC_URL 为可公网访问地址(例如 ngrok)，或改用 personUrl/garmentUrl 传入公网图片 URL'
               : error instanceof ArkHttpError
                 ? `Ark 请求失败(${error.status})`
-                : error?.message || '生成失败';
+                : error instanceof BlobTransferError
+                  ? normalizeBlobTransferErrorMessage(error)
+                : '生成失败';
 
     console.error('[TryOnWorker] task_processing_failed', {
       taskId,
@@ -173,8 +189,8 @@ export async function POST(req: Request) {
       garmentUrl: storedGarmentUrl
     });
 
-    processTask(taskId, personInput, garmentInput, storedPersonUrl, storedGarmentUrl, mode).catch((error) => {
-      console.error('[TryOnWorker] unhandled_error', { taskId, errorName: error?.name });
+    processTask(taskId, user.id, personInput, garmentInput, storedPersonUrl, storedGarmentUrl, mode).catch((error) => {
+      console.error('[TryOnWorker] unhandled_error', { taskId, errorName: error?.name, errorMessage: error?.message });
     });
 
     return NextResponse.json({ taskId });
