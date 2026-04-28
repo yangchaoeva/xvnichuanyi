@@ -7,6 +7,7 @@ import {
   normalizePassword,
   normalizeUsername
 } from '@/lib/auth';
+import { sendWelcomeEmail } from '@/lib/email';
 import { getTurnstileSecretKey } from '@/lib/turnstile';
 
 export const runtime = 'nodejs';
@@ -126,6 +127,17 @@ export async function POST(req: Request) {
       rememberMe: true,
       request: req
     });
+
+    try {
+      await sendWelcomeEmail(email, username);
+    } catch (error: any) {
+      console.error('[auth/register] welcome_email_failed', {
+        userId,
+        email,
+        errorName: error?.name,
+        errorMessage: error?.message
+      });
+    }
 
     return NextResponse.json({
       user: { id: userId, email, username, role }
