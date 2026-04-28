@@ -57,7 +57,7 @@ async function processTask(
       image: [personInput, garmentInput] as [string, string],
       sequential_image_generation: 'disabled' as const,
       response_format: 'url' as const,
-      size: '2K',
+      size: '1K',
       stream: false,
       watermark: true
     };

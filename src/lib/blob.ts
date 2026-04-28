@@ -1,7 +1,7 @@
 import { put } from '@vercel/blob';
 import { randomBytes } from 'node:crypto';
 
-const DEFAULT_TIMEOUT_MS = 15_000;
+const DEFAULT_TIMEOUT_MS = 45_000;
 const DEFAULT_MAX_BYTES = 10 * 1024 * 1024;
 const MAX_REDIRECTS = 5;
 
