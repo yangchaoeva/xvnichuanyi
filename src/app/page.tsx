@@ -303,6 +303,7 @@ export default function Home() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [pollingTaskId, setPollingTaskId] = useState<string | null>(null);
   const [isUploadingAssets, setIsUploadingAssets] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
 
   const personInputRef = useRef<HTMLInputElement>(null);
@@ -509,10 +510,17 @@ export default function Home() {
   }, [router]);
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    setCurrentUser(null);
-    router.replace('/login');
-    router.refresh();
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      setCurrentUser(null);
+      router.replace('/login');
+      router.refresh();
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   useEffect(() => {
@@ -646,12 +654,16 @@ export default function Home() {
             <button
               type="button"
               aria-label="退出登录"
+              disabled={isLoggingOut}
               onClick={() => {
                 void handleLogout();
               }}
-              className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+              className={cn(
+                'rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors',
+                isLoggingOut ? 'cursor-not-allowed bg-slate-100 opacity-70' : 'hover:bg-slate-100'
+              )}
             >
-              退出
+              {isLoggingOut ? '退出中...' : '退出'}
             </button>
           </div>
         </div>

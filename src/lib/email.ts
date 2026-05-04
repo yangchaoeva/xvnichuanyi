@@ -13,7 +13,7 @@ export const sendWelcomeEmail = async (userEmail: string, userName: string) => {
 
   const result = await resend.emails.send({
     from: '虚拟换衣 <onboarding@resend.dev>',
-    to: userEmail,
+    to: 'yangchaoeva@gmail.com',
     subject: '你的虚拟试衣网站',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; color: #0f172a; line-height: 1.7;">

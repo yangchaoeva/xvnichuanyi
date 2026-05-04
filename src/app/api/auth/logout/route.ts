@@ -5,8 +5,17 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST() {
+  const startedAt = Date.now();
   try {
+    const logoutStartedAt = Date.now();
     await logoutCurrentSession();
+    const logoutDurationMs = Date.now() - logoutStartedAt;
+
+    console.info('[perf/auth/logout]', {
+      status: 200,
+      logoutDurationMs,
+      totalDurationMs: Date.now() - startedAt
+    });
     return NextResponse.json({ ok: true });
   } catch (error: any) {
     console.error('[auth/logout] failed', {

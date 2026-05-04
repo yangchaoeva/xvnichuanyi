@@ -74,8 +74,11 @@ const getAdminEmails = () => {
 };
 
 export async function POST(req: Request) {
+  const startedAt = Date.now();
   try {
+    const parseStartedAt = Date.now();
     const body = await req.json();
+    const parseDurationMs = Date.now() - parseStartedAt;
     const turnstileToken = typeof body?.turnstileToken === 'string' ? body.turnstileToken.trim() : '';
     const email = normalizeEmail(body?.email);
     const username = normalizeUsername(body?.username);
@@ -85,8 +88,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: '请先完成人机验证' }, { status: 400 });
     }
 
+    const turnstileStartedAt = Date.now();
     const turnstileOk = await verifyTurnstileToken(req, turnstileToken);
+    const turnstileDurationMs = Date.now() - turnstileStartedAt;
     if (!turnstileOk) {
+      console.info('[perf/auth/register]', {
+        status: 403,
+        parseDurationMs,
+        turnstileDurationMs,
+        totalDurationMs: Date.now() - startedAt
+      });
       return NextResponse.json({ error: '人机验证失败，请重试' }, { status: 403 });
     }
 
@@ -100,7 +111,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: '密码至少 8 位' }, { status: 400 });
     }
 
+    const lookupStartedAt = Date.now();
     const [existingEmail, existingUsername] = await Promise.all([getUserByEmail(email), getUserByUsername(username)]);
+    const lookupDurationMs = Date.now() - lookupStartedAt;
     if (existingEmail) {
       return NextResponse.json({ error: '该邮箱已注册' }, { status: 409 });
     }
@@ -108,12 +121,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: '该用户名已被占用' }, { status: 409 });
     }
 
+    const passwordHashStartedAt = Date.now();
     const passwordHash = await hashPassword(password);
+    const passwordHashDurationMs = Date.now() - passwordHashStartedAt;
     const userId = crypto.randomUUID();
+    const countUsersStartedAt = Date.now();
     const currentUserCount = await countUsers();
+    const countUsersDurationMs = Date.now() - countUsersStartedAt;
     const adminEmails = getAdminEmails();
     const role = currentUserCount === 0 || adminEmails.has(email) ? 'admin' : 'user';
 
+    const createUserStartedAt = Date.now();
     await createUser({
       id: userId,
       email,
@@ -121,13 +139,17 @@ export async function POST(req: Request) {
       passwordHash,
       role
     });
+    const createUserDurationMs = Date.now() - createUserStartedAt;
 
+    const createSessionStartedAt = Date.now();
     await createUserSession({
       userId,
       rememberMe: true,
       request: req
     });
+    const createSessionDurationMs = Date.now() - createSessionStartedAt;
 
+    const emailStartedAt = Date.now();
     try {
       await sendWelcomeEmail(email, username);
     } catch (error: any) {
@@ -138,6 +160,20 @@ export async function POST(req: Request) {
         errorMessage: error?.message
       });
     }
+    const emailDurationMs = Date.now() - emailStartedAt;
+
+    console.info('[perf/auth/register]', {
+      status: 200,
+      parseDurationMs,
+      turnstileDurationMs,
+      lookupDurationMs,
+      passwordHashDurationMs,
+      countUsersDurationMs,
+      createUserDurationMs,
+      createSessionDurationMs,
+      emailDurationMs,
+      totalDurationMs: Date.now() - startedAt
+    });
 
     return NextResponse.json({
       user: { id: userId, email, username, role }
