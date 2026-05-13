@@ -13,6 +13,8 @@ const UI_STATES = {
   ERROR: 'error'
 } as const;
 
+const DISCORD_INVITE_URL = 'https://discord.gg/pdZTtVbd';
+
 type UIState = typeof UI_STATES[keyof typeof UI_STATES];
 type UploadCardKind = 'person' | 'garment';
 type AuthUser = {
@@ -701,8 +703,18 @@ export default function Home() {
             <p className="mt-3 text-sm leading-6 text-slate-500">
               上传您的人物照片和服饰图，即刻预览真实试穿效果
             </p>
-            <div className="mt-4 flex justify-center">
+            <div className="mt-4 flex flex-col items-center gap-3">
               <StatusPill tone={taskStatus.tone} label={`任务状态：${taskStatus.label}`} />
+              <a
+                href={DISCORD_INVITE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+              >
+                <Icon name="forum" className="text-sm" />
+                <span>加入 Discord 社区</span>
+                <Icon name="open_in_new" className="text-sm" />
+              </a>
             </div>
           </header>
 
